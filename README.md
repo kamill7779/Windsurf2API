@@ -178,6 +178,10 @@ src/
     └── index.html    # Admin UI (SPA)
 ```
 
+## Docs
+
+- [System-Prompt Tool Emulation for Anthropic `/v1/messages`](docs/methods/system-prompt-tool-emulation.md)
+
 ## Contact
 
 This is a solo side-project and I'd love to have people join in.

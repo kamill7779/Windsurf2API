@@ -59,7 +59,7 @@ The server listens on `http://0.0.0.0:3003` by default.
 
 ```bash
 # Build image (downloads Windsurf LS automatically)
-docker build -t windsurf2api .
+docker build -f deploy/Dockerfile -t windsurf2api .
 
 # Run
 docker run -d \

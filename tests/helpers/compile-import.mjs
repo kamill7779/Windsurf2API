@@ -3,16 +3,45 @@ import { mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const TMP_DIR = path.resolve('.tmp-test-build');
+const TMP_ROOT_DIR = path.resolve('.tmp-test-build');
 const TSC_CLI_PATH = path.resolve('node_modules', 'typescript', 'bin', 'tsc');
+const ownedSessionRoots = new Set();
+
+let sessionRoot = '';
+let compileCounter = 0;
+
+function ensureDir(dirPath) {
+  mkdirSync(dirPath, { recursive: true });
+}
+
+function allocateSessionRoot() {
+  ensureDir(TMP_ROOT_DIR);
+
+  const root = path.join(
+    TMP_ROOT_DIR,
+    `worker-${process.pid}-session-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+  );
+  ensureDir(root);
+  ownedSessionRoots.add(root);
+  return root;
+}
+
+function getCurrentSessionRoot() {
+  if (!sessionRoot) {
+    sessionRoot = allocateSessionRoot();
+  }
+  return sessionRoot;
+}
 
 export function resetCompiledTestModules() {
-  rmSync(TMP_DIR, { recursive: true, force: true });
-  mkdirSync(TMP_DIR, { recursive: true });
+  sessionRoot = allocateSessionRoot();
+  compileCounter = 0;
 }
 
 export async function compileAndImportTsModule(entryRelativePath) {
   const entryPath = path.resolve(entryRelativePath);
+  const outputRoot = path.join(getCurrentSessionRoot(), `build-${compileCounter++}`);
+  ensureDir(outputRoot);
   const compile = spawnSync(
     process.execPath,
     [
@@ -34,7 +63,7 @@ export async function compileAndImportTsModule(entryRelativePath) {
       '--rootDir',
       '.',
       '--outDir',
-      TMP_DIR,
+      outputRoot,
       entryPath,
     ],
     {
@@ -53,9 +82,15 @@ export async function compileAndImportTsModule(entryRelativePath) {
   }
 
   const outputPath = path.resolve(
-    TMP_DIR,
+    outputRoot,
     entryRelativePath.replace(/\.ts$/, '.js').replaceAll('/', path.sep),
   );
 
   return import(pathToFileURL(outputPath).href + `?t=${Date.now()}`);
 }
+
+process.once('exit', () => {
+  for (const root of ownedSessionRoots) {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

@@ -55,6 +55,7 @@ export interface CascadeConfigOptions {
   plannerMode?: PlannerMode;
   communicationText?: string;
   includeCommunicationOverride?: boolean;
+  toolPreamble?: string;
 }
 
 export interface ChatToolCallInfo {
@@ -299,10 +300,31 @@ export function buildCascadeConfig(
   options: CascadeConfigOptions = {},
 ): Buffer {
   const plannerMode = options.plannerMode ?? PlannerMode.NO_TOOL;
-  const communicationText = options.communicationText ?? 'You are an AI assistant accessed via API.';
+  const communicationText = options.communicationText ?? (
+    options.toolPreamble
+      ? 'You are an AI assistant accessed via API with the tool-calling capabilities described above.'
+      : 'You are an AI assistant accessed via API.'
+  );
   const includeCommunicationOverride = options.includeCommunicationOverride ?? true;
 
   const convParts = [writeVarintField(4, plannerMode)];
+
+  if (options.toolPreamble) {
+    const additionalInstructionsSection = Buffer.concat([
+      writeVarintField(1, 1),
+      writeStringField(
+        2,
+        `${options.toolPreamble}\n\nIMPORTANT: You have real, callable functions described above. When a request requires a function call, emit <tool_call> blocks exactly as specified and do not claim tool access is unavailable.`,
+      ),
+    ]);
+    convParts.push(writeMessageField(12, additionalInstructionsSection));
+
+    const toolCallingSection = Buffer.concat([
+      writeVarintField(1, 1),
+      writeStringField(2, options.toolPreamble),
+    ]);
+    convParts.push(writeMessageField(10, toolCallingSection));
+  }
 
   // Minimal override
   if (includeCommunicationOverride) {

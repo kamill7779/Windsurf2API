@@ -8,7 +8,7 @@ import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { getCsrfToken, getLsPort, isLsReady } from '../core/langserver.js';
 import { config } from '../config.js';
-import { submitBashToolResult } from '../services/tool-bridge.js';
+import { submitBashToolResult } from '../services/modes/native-bridge/tool-bridge.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 

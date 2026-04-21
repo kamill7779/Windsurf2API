@@ -18,8 +18,8 @@ import {
   buildOpenAIToolUnsupportedError,
   hasOpenAIToolInput,
   hasResponsesToolInput,
-} from './tool-support.js';
-import { createToolBridgeSession } from './tool-bridge.js';
+} from './modes/native-bridge/tool-support.js';
+import { createToolBridgeSession } from './modes/native-bridge/tool-bridge.js';
 
 // ─── Shared core: auth → pick channel → stream → collect ───
 

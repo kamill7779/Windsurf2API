@@ -13,7 +13,7 @@ import {
   findToolBridgeSessionByToolCallId,
   getToolBridgeSession,
   submitBashToolResult,
-} from './tool-bridge.js';
+} from './modes/native-bridge/tool-bridge.js';
 import {
   buildAnthropicToolUnsupportedError,
   extractSupportedAnthropicMockTools,
@@ -21,7 +21,7 @@ import {
   hasAnthropicToolMessages,
   hasAnthropicToolInput,
   SupportedAnthropicMockTool,
-} from './tool-support.js';
+} from './modes/native-bridge/tool-support.js';
 
 function json(res: http.ServerResponse, status: number, body: object) {
   res.writeHead(status, {

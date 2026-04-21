@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tar.gz
+
+# Data (local state)
+data/
+
+# Deploy scripts (contain server credentials)
+deploy*.py
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git worktrees
+.worktrees/
+
+# Temp / cache
+tmp/
+.tmp/
+__pycache__/
+
+# Dev-only: probe & reverse-engineering scripts
+probe-*.mjs
+dump-*.mjs
+test-*.mjs
+scripts/reverse-engineering/
+docs/plans/
+docs/reverse-engineering/
+docs/windsurf-native-tools.md
+scripts/e2e-bash-bridge.mjs

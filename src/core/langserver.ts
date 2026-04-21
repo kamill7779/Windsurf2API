@@ -1,0 +1,86 @@
+/**
+ * Language server process manager.
+ * Simplified MVP — single LS instance, no proxy pool.
+ */
+
+import { spawn } from 'child_process';
+import http2 from 'http2';
+import { log } from '../config.js';
+
+const DEFAULT_PORT = 42100;
+const DEFAULT_CSRF = 'windsurf-api-csrf-fixed-token';
+
+let _process: ReturnType<typeof spawn> | null = null;
+let _port = DEFAULT_PORT;
+let _ready = false;
+
+export async function startLanguageServer(opts: {
+  binaryPath: string;
+  port?: number;
+  apiServerUrl?: string;
+}): Promise<{ port: number; csrfToken: string }> {
+  if (_ready) return { port: _port, csrfToken: DEFAULT_CSRF };
+
+  const binaryPath = opts.binaryPath;
+  const port = opts.port || DEFAULT_PORT;
+  _port = port;
+
+  const args = [
+    `--api_server_url=${opts.apiServerUrl || 'https://server.self-serve.windsurf.com'}`,
+    `--server_port=${port}`,
+    `--csrf_token=${DEFAULT_CSRF}`,
+    '--register_user_url=https://api.codeium.com/register_user/',
+    '--codeium_dir=/opt/windsurf/data/default',
+    '--database_dir=/opt/windsurf/data/default/db',
+    '--enable_local_search=false',
+    '--enable_index_service=false',
+    '--enable_lsp=false',
+    '--detect_proxy=false',
+  ];
+
+  log.info(`Starting LS on port ${port}`);
+  const proc = spawn(binaryPath, args, { stdio: 'pipe' });
+  _process = proc;
+
+  proc.stdout?.on('data', (d) => {
+    const line = d.toString().trim();
+    if (line) log.debug('[LS]', line.slice(0, 200));
+  });
+  proc.stderr?.on('data', (d) => {
+    const line = d.toString().trim();
+    if (line) log.debug('[LSerr]', line.slice(0, 200));
+  });
+  proc.on('exit', (code) => {
+    log.warn(`LS exited: code=${code}`);
+    _ready = false;
+  });
+
+  // Wait for port ready
+  for (let i = 0; i < 30; i++) {
+    await new Promise(r => setTimeout(r, 1000));
+    try {
+      await new Promise((resolve, reject) => {
+        const client = http2.connect(`http://localhost:${port}`);
+        const t = setTimeout(() => { client.close(); reject(new Error('timeout')); }, 2000);
+        client.on('connect', () => { clearTimeout(t); client.close(); resolve(undefined); });
+        client.on('error', () => { clearTimeout(t); reject(new Error('connect error')); });
+      });
+      _ready = true;
+      log.info(`LS ready on port ${port}`);
+      return { port, csrfToken: DEFAULT_CSRF };
+    } catch { /* retry */ }
+  }
+  throw new Error('LS failed to start within 30s');
+}
+
+export function stopLanguageServer(): void {
+  if (_process) {
+    try { _process.kill('SIGKILL'); } catch { /* ignore */ }
+    _process = null;
+  }
+  _ready = false;
+}
+
+export function getLsPort(): number { return _port; }
+export function getCsrfToken(): string { return DEFAULT_CSRF; }
+export function isLsReady(): boolean { return _ready; }

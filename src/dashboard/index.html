@@ -1,0 +1,1746 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Windsurf2API Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #09090b;
+      --bg-elev: #0d0d10;
+      --surface: #111114;
+      --surface-2: #17171c;
+      --surface-3: #1c1c22;
+      --border: #26262e;
+      --border-strong: #32323c;
+      --text: #f4f4f5;
+      --text-muted: #a1a1aa;
+      --text-dim: #71717a;
+      --accent: #6366f1;
+      --accent-hover: #7c7ff5;
+      --accent-soft: rgba(99,102,241,0.15);
+      --success: #22c55e;
+      --warn: #f59e0b;
+      --error: #ef4444;
+      --info: #3b82f6;
+      --radius: 10px;
+      --radius-sm: 6px;
+      --font: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,sans-serif;
+      --mono: 'SF Mono',Monaco,Inconsolata,'Fira Code',monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #F5F2EE;
+      color: #1C1C1C;
+      min-height: 100vh;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    /* ─── Layout ─── */
+    .app { display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: clamp(200px, 18vw, 260px);
+      background: #FFFFFF;
+      border-right: 1px solid #E8E4E0;
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 100;
+      transition: transform 0.2s;
+    }
+
+    .sidebar-brand {
+      padding: 28px 20px 16px;
+    }
+
+    .sidebar-brand .brand-title {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: #1C1C1C;
+      letter-spacing: -0.01em;
+    }
+
+    .sidebar-brand .brand-sub {
+      font-size: 0.625rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #9B9B9B;
+      margin-top: 2px;
+    }
+
+    .nav { padding: 16px 12px; flex: 1; overflow-y: auto; }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      color: #6B6B6B;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.15s;
+      margin-bottom: 2px;
+    }
+
+    .nav-item:hover { background: #F5F2EE; color: #1C1C1C; }
+    .nav-item.active {
+      background: #F5F2EE;
+      color: #C4694C;
+      position: relative;
+    }
+    .nav-item.active::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 50%; transform: translateY(-50%);
+      width: 3px; height: 20px;
+      background: #C4694C;
+      border-radius: 0 3px 3px 0;
+    }
+
+    .nav-item .icon { width: 18px; text-align: center; font-size: 15px; }
+
+    .sidebar-footer {
+      padding: 16px 20px;
+      border-top: 1px solid #E8E4E0;
+      margin-top: auto;
+    }
+
+    .version-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      color: #9B9B9B;
+      text-decoration: none;
+      transition: color 0.2s;
+      letter-spacing: 0.02em;
+    }
+
+    .version-link:hover { color: #C4694C; }
+
+    .main {
+      flex: 1;
+      margin-left: clamp(200px, 18vw, 260px);
+      padding: 28px 36px;
+      max-width: calc(100vw - clamp(200px, 18vw, 260px));
+      background: #F5F2EE;
+      min-height: 100vh;
+    }
+
+    /* ─── Mobile ─── */
+    .menu-toggle {
+      display: none;
+      position: fixed;
+      top: 12px; left: 12px;
+      z-index: 200;
+      background: #FFFFFF;
+      border: 1px solid #E8E4E0;
+      color: #1C1C1C;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .main { margin-left: 0; max-width: 100vw; padding: 56px 16px 24px; }
+      .menu-toggle { display: block; }
+    }
+
+    /* ─── Cards ─── */
+    .card {
+      background: #FFFFFF;
+      border: 1px solid #E8E4E0;
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1C1C1C;
+    }
+
+    /* ─── Stats Grid ─── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: #FFFFFF;
+      border: 1px solid #E8E4E0;
+      border-radius: 12px;
+      padding: 20px;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+
+    .stat-card:hover { border-color: #D5CFC9; }
+
+    .stat-label {
+      font-size: 11px;
+      color: #9B9B9B;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1C1C1C;
+      line-height: 1;
+      font-family: 'Cormorant Garamond', Georgia, serif;
+    }
+
+    .stat-sub {
+      font-size: 12px;
+      color: #6B6B6B;
+      margin-top: 6px;
+    }
+
+    /* ─── Tables ─── */
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th {
+      text-align: left;
+      padding: 10px 12px;
+      color: #9B9B9B;
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      border-bottom: 1px solid #E8E4E0;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 12px;
+      border-bottom: 1px solid #E8E4E0;
+      color: #6B6B6B;
+      vertical-align: middle;
+    }
+
+    tr:hover td { background: rgba(196, 105, 76, 0.03); }
+    tr:last-child td { border-bottom: none; }
+
+    /* ─── Badges ─── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .badge-success { background: rgba(34,197,94,0.1); color: #22c55e; }
+    .badge-warn { background: rgba(245,158,11,0.1); color: #f59e0b; }
+    .badge-error { background: rgba(239,68,68,0.1); color: #ef4444; }
+    .badge-info { background: rgba(196,105,76,0.1); color: #C4694C; }
+
+    /* ─── Buttons ─── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid #E8E4E0;
+      background: #FFFFFF;
+      color: #1C1C1C;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+
+    .btn:hover { background: #F5F2EE; border-color: #D5CFC9; }
+    .btn:active { transform: translateY(1px); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-primary {
+      background: #C4694C;
+      border-color: #C4694C;
+      color: #fff;
+    }
+    .btn-primary:hover { background: #A8553D; border-color: #A8553D; }
+
+    .btn-danger { color: #ef4444; border-color: rgba(239,68,68,0.2); }
+    .btn-danger:hover { background: rgba(239,68,68,0.08); }
+
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+    .btn-group { display: flex; gap: 8px; }
+
+    /* ─── Forms ─── */
+    input, select {
+      background: #F5F2EE;
+      border: 1px solid #E8E4E0;
+      border-radius: 8px;
+      padding: 9px 12px;
+      color: #1C1C1C;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      width: 100%;
+    }
+
+    input:focus, select:focus { border-color: #C4694C; box-shadow: 0 0 0 3px rgba(196,105,76,0.1); }
+    input::placeholder { color: #9B9B9B; }
+
+    .form-group { margin-bottom: 14px; }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      color: #6B6B6B;
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* ─── Modal ─── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 500;
+      padding: 20px;
+      backdrop-filter: blur(4px);
+    }
+
+    .modal {
+      background: #FFFFFF;
+      border: 1px solid #E8E4E0;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 460px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      padding: 20px 20px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1C1C1C;
+    }
+
+    .modal-body { padding: 16px 20px; }
+    .modal-footer {
+      padding: 0 20px 20px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    /* ─── Toast ─── */
+    .toast-wrap {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 600;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .toast {
+      background: #FFFFFF;
+      border: 1px solid #E8E4E0;
+      border-radius: 10px;
+      padding: 14px 18px;
+      min-width: 280px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+      animation: toastIn 0.3s ease;
+      font-size: 13px;
+      color: #1C1C1C;
+    }
+
+    .toast.success { border-color: #22c55e; }
+    .toast.error { border-color: #ef4444; }
+    .toast.info  { border-color: #C4694C; }
+
+    .toast-rich {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .toast-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .toast-icon.success { background: rgba(34,197,94,0.1); }
+    .toast-icon.error   { background: rgba(239,68,68,0.1); }
+    .toast-icon.info    { background: rgba(196,105,76,0.1); }
+
+    .toast-body {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .toast-title {
+      font-weight: 600;
+      font-size: 13px;
+      color: #1C1C1C;
+    }
+
+    .toast-sub {
+      font-size: 12px;
+      color: #9B9B9B;
+    }
+
+    @keyframes toastIn {
+      from { transform: translateX(20px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* ─── Panel Animations ─── */
+    .panel { display: none; opacity: 0; }
+    .panel.active {
+      display: block;
+      animation: panelIn 0.35s ease forwards;
+    }
+
+    @keyframes panelIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Card hover lift */
+    .card, .stat-card, .model-card {
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.15s;
+    }
+    .card:hover, .stat-card:hover, .model-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+    }
+
+    /* Button press */
+    .btn, .login-btn {
+      transition: all 0.2s ease;
+    }
+
+    /* Nav item slide */
+    .nav-item {
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    /* Progress bar shimmer */
+    .quota-fill {
+      background: linear-gradient(90deg, #C4694C, #D97757, #C4694C);
+      background-size: 200% 100%;
+      animation: shimmer 3s ease infinite;
+    }
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Stagger animation for cards */
+    .panel.active .card,
+    .panel.active .stat-card {
+      animation: cardIn 0.4s ease backwards;
+    }
+    .panel.active .card:nth-child(1) { animation-delay: 0.05s; }
+    .panel.active .card:nth-child(2) { animation-delay: 0.10s; }
+    .panel.active .card:nth-child(3) { animation-delay: 0.15s; }
+    .panel.active .card:nth-child(4) { animation-delay: 0.20s; }
+
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #1C1C1C;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 20px;
+      color: #9B9B9B;
+    }
+
+    .empty-state .icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
+
+    /* ─── Logs ─── */
+    .log-container {
+      background: #FAFAF8;
+      border: 1px solid #E8E4E0;
+      border-radius: 8px;
+      padding: 12px;
+      font-family: var(--mono);
+      font-size: 12px;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+
+    .log-line {
+      padding: 3px 0;
+      color: #6B6B6B;
+      border-bottom: 1px solid rgba(0,0,0,0.04);
+    }
+    .log-line:last-child { border-bottom: none; }
+    .log-time { color: #9B9B9B; margin-right: 8px; }
+    .log-info { color: #3b82f6; }
+    .log-warn { color: #f59e0b; }
+    .log-error { color: #ef4444; }
+
+    /* ─── Key display ─── */
+    .key-display {
+      font-family: var(--mono);
+      font-size: 12px;
+      background: #F5F2EE;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid #E8E4E0;
+      display: inline-block;
+    }
+
+    .quota-bar {
+      width: 100%;
+      height: 6px;
+      background: #F5F2EE;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+
+    .quota-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #C4694C, #D97757);
+      border-radius: 3px;
+      transition: width 0.3s;
+    }
+
+    /* ─── Models grid ─── */
+    .models-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+    }
+
+    .model-card {
+      background: #FFFFFF;
+      border: 1px solid #E8E4E0;
+      border-radius: 12px;
+      padding: 16px;
+      transition: border-color 0.15s;
+    }
+
+    .model-card:hover { border-color: #D5CFC9; }
+
+    .model-card .provider {
+      font-size: 11px;
+      color: #9B9B9B;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .model-card .name { font-weight: 600; font-size: 14px; color: #1C1C1C; }
+
+    .model-card .credit {
+      font-size: 12px;
+      color: #6B6B6B;
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* ─── Anthropic-Style Login ─── */
+    .login-overlay {
+      position: fixed;
+      inset: 0;
+      background: #FAFAF8;
+      display: flex;
+      z-index: 1000;
+    }
+
+    .login-overlay.hidden { display: none !important; }
+
+    .login-split {
+      display: flex;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Left Panel — Anthropic Abstract Visual */
+    .login-visual {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: flex-end;
+      padding: 64px;
+    }
+
+    .login-visual::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 70% 50% at 15% 85%, rgba(196, 105, 76, 0.18) 0%, transparent 65%),
+        radial-gradient(ellipse 50% 70% at 85% 15%, rgba(168, 85, 61, 0.14) 0%, transparent 55%),
+        radial-gradient(circle at 55% 45%, rgba(217, 119, 87, 0.08) 0%, transparent 45%),
+        linear-gradient(165deg, #EDE9E4 0%, #F5F2EE 30%, #FAFAF8 60%, #F0EEEB 100%);
+    }
+
+    .login-visual::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+      opacity: 0.03;
+      pointer-events: none;
+    }
+
+    /* Abstract shapes */
+    .login-visual .shape-1 {
+      position: absolute;
+      width: 380px;
+      height: 380px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(196, 105, 76, 0.28) 0%, transparent 65%);
+      top: 10%;
+      left: 5%;
+      filter: blur(50px);
+      animation: float 8s ease-in-out infinite;
+    }
+
+    .login-visual .shape-2 {
+      position: absolute;
+      width: 280px;
+      height: 280px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(168, 85, 61, 0.22) 0%, transparent 60%);
+      bottom: 20%;
+      right: 10%;
+      filter: blur(55px);
+      animation: float 10s ease-in-out infinite 2s;
+    }
+
+    .login-visual .shape-3 {
+      position: absolute;
+      width: 200px;
+      height: 200px;
+      border: 1.5px solid rgba(196, 105, 76, 0.22);
+      border-radius: 50%;
+      top: 35%;
+      right: 25%;
+      animation: rotate 30s linear infinite;
+    }
+
+    .login-visual .shape-4 {
+      position: absolute;
+      width: 2px;
+      height: 140px;
+      background: linear-gradient(to bottom, transparent, rgba(196, 105, 76, 0.45), transparent);
+      top: 15%;
+      right: 35%;
+      transform: rotate(15deg);
+    }
+
+    .login-visual .shape-5 {
+      position: absolute;
+      width: 72px;
+      height: 72px;
+      border: 1.5px solid rgba(196, 105, 76, 0.18);
+      bottom: 30%;
+      left: 22%;
+      transform: rotate(45deg);
+    }
+
+    .login-visual .shape-6 {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      background: rgba(196, 105, 76, 0.35);
+      border-radius: 50%;
+      top: 25%;
+      right: 20%;
+      filter: blur(2px);
+    }
+
+    .login-visual .shape-7 {
+      position: absolute;
+      width: 100px;
+      height: 1px;
+      background: linear-gradient(to right, transparent, rgba(196, 105, 76, 0.35), transparent);
+      bottom: 40%;
+      left: 15%;
+      transform: rotate(-20deg);
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-20px) scale(1.05); }
+    }
+
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .login-visual-brand {
+      position: relative;
+      z-index: 2;
+    }
+
+    .login-visual-brand h2 {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 2.5rem;
+      font-weight: 600;
+      color: #1C1C1C;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+    }
+
+    .login-visual-brand p {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 0.875rem;
+      color: #6B6B6B;
+      margin-top: 12px;
+      max-width: 280px;
+      line-height: 1.6;
+    }
+
+    /* Right Panel — Form */
+    .login-form-panel {
+      flex: 1;
+      background: #FFFFFF;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 48px 64px;
+      position: relative;
+    }
+
+    .login-form-inner {
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .login-form-header {
+      margin-bottom: 40px;
+    }
+
+    .login-form-header h1 {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 2.75rem;
+      font-weight: 700;
+      color: #1C1C1C;
+      letter-spacing: -0.02em;
+      line-height: 1.05;
+    }
+
+    .login-form-header p {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 0.9375rem;
+      color: #6B6B6B;
+      margin-top: 12px;
+      line-height: 1.6;
+    }
+
+    .login-form-group {
+      margin-bottom: 24px;
+    }
+
+    .login-form-group label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #6B6B6B;
+      margin-bottom: 10px;
+    }
+
+    .login-form-group label .icon {
+      width: 14px;
+      height: 14px;
+      opacity: 0.6;
+    }
+
+    .login-input {
+      width: 100%;
+      background: #F5F2EE;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 0.9375rem;
+      color: #1C1C1C;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .login-input::placeholder {
+      color: #9B9B9B;
+      font-size: 0.875rem;
+    }
+
+    .login-input:focus {
+      background: #FFFFFF;
+      border-color: #C4694C;
+      box-shadow: 0 0 0 3px rgba(196, 105, 76, 0.1);
+    }
+
+    .login-btn {
+      width: 100%;
+      background: #C4694C;
+      color: #FFFFFF;
+      border: none;
+      border-radius: 8px;
+      padding: 15px 24px;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      margin-top: 8px;
+    }
+
+    .login-btn:hover {
+      background: #A8553D;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(196, 105, 76, 0.25);
+    }
+
+    .login-btn:active {
+      transform: translateY(0);
+    }
+
+    .login-btn .arrow {
+      transition: transform 0.2s ease;
+    }
+
+    .login-btn:hover .arrow {
+      transform: translateX(3px);
+    }
+
+    .login-footer {
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid #E8E4E0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .login-footer a {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 0.8125rem;
+      color: #6B6B6B;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .login-footer a:hover {
+      color: #C4694C;
+    }
+
+    .login-hint {
+      margin-top: 20px;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 0.75rem;
+      color: #9B9B9B;
+      text-align: center;
+    }
+
+    .login-hint code {
+      background: #F5F2EE;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.6875rem;
+      color: #6B6B6B;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .login-visual { display: none; }
+      .login-form-panel {
+        width: 100%;
+        min-width: auto;
+        padding: 32px;
+      }
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<!-- Mobile menu toggle -->
+<button class="menu-toggle" onclick="App.toggleSidebar()">&#9776;</button>
+
+<!-- Login overlay -->
+<div id="login-overlay" class="login-overlay">
+  <div class="login-split">
+    <!-- Left: Anthropic Abstract Visual -->
+    <div class="login-visual">
+      <div class="shape-1"></div>
+      <div class="shape-2"></div>
+      <div class="shape-3"></div>
+      <div class="shape-4"></div>
+      <div class="shape-5"></div>
+      <div class="shape-6"></div>
+      <div class="shape-7"></div>
+      <div class="login-visual-brand">
+        <h2>Windsurf2API</h2>
+        <p>Bridge Windsurf capabilities to Anthropic &amp; OpenAI-compatible API endpoints.</p>
+      </div>
+    </div>
+
+    <!-- Right: Login Form -->
+    <div class="login-form-panel">
+      <div class="login-form-inner">
+        <div class="login-form-header">
+          <h1>Enter<br>Dashboard</h1>
+          <p>Access the admin console. Please provide your password to proceed.</p>
+        </div>
+
+        <form onsubmit="event.preventDefault(); App.doLogin();">
+          <div class="login-form-group">
+            <label for="login-pw">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+              </svg>
+              Password
+            </label>
+            <input
+              type="password"
+              id="login-pw"
+              class="login-input"
+              placeholder="Enter admin password"
+              autocomplete="current-password"
+              onkeydown="if(event.key==='Enter')App.doLogin()"
+            >
+          </div>
+
+          <button type="submit" class="login-btn">
+            <span>Authenticate</span>
+            <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M5 12h14M12 5l7 7-7 7"></path>
+            </svg>
+          </button>
+        </form>
+
+        <p class="login-hint">
+          Set <code>ADMIN_PASSWORD</code> env var to protect dashboard
+        </p>
+
+        <div class="login-footer">
+          <a href="#">Documentation</a>
+          <a href="https://github.com" target="_blank">GitHub →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-title">Windsurf2API</div>
+      <div class="brand-sub">Dashboard</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" data-panel="overview" onclick="App.nav('overview')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+          <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+          <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+          <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+        </svg>
+        Dashboard
+      </div>
+      <div class="nav-item" data-panel="channels" onclick="App.nav('channels')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"></path>
+        </svg>
+        Configuration
+      </div>
+      <div class="nav-item" data-panel="tokens" onclick="App.nav('tokens')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+        Accounts
+      </div>
+      <div class="nav-item" data-panel="models" onclick="App.nav('models')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+          <path d="M2 17l10 5 10-5"></path>
+          <path d="M2 12l10 5 10-5"></path>
+        </svg>
+        Models
+      </div>
+      <div class="nav-item" data-panel="stats" onclick="App.nav('stats')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 20V10M12 20V4M6 20v-6"></path>
+        </svg>
+        Analytics
+      </div>
+      <div class="nav-item" data-panel="logs" onclick="App.nav('logs')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+        </svg>
+        Logs
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="https://github.com" target="_blank" class="version-link">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"></path>
+        </svg>
+        <span id="app-version">v2.0.0</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- Overview Panel — Windsurf2API Dashboard -->
+    <div class="panel active" id="panel-overview">
+      <!-- Header Bar -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:32px">
+        <div style="position:relative;flex:1;max-width:360px">
+          <svg style="position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:0.4" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B6B6B" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="M21 21l-4.35-4.35"></path>
+          </svg>
+          <input type="text" placeholder="Search workspace collections..." style="padding-left:36px;background:#FFFFFF;border:1px solid #E8E4E0;border-radius:10px;padding:10px 12px 10px 36px;width:100%;font-size:13px">
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;margin-left:20px">
+          <button style="background:none;border:none;cursor:pointer;padding:8px;position:relative">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B6B6B" stroke-width="2">
+              <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 01-3.46 0"></path>
+            </svg>
+            <span style="position:absolute;top:6px;right:6px;width:6px;height:6px;background:#C4694C;border-radius:50%"></span>
+          </button>
+          <button style="background:none;border:none;cursor:pointer;padding:8px">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B6B6B" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"></path>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+          </button>
+          <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#C4694C,#D97757);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:600;cursor:pointer">A</div>
+          <button onclick="App.logout()" style="background:none;border:none;cursor:pointer;padding:8px;color:#9B9B9B;transition:color 0.2s" onmouseover="this.style.color='#C4694C'" onmouseout="this.style.color='#9B9B9B'">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Hero Section -->
+      <div style="display:flex;gap:40px;margin-bottom:36px;align-items:flex-start">
+        <div style="flex:1">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#C4694C;margin-bottom:16px">Identity Verified</div>
+          <h1 style="font-family:'Cormorant Garamond',Georgia,serif;font-size:3rem;font-weight:700;color:#1C1C1C;letter-spacing:-0.02em;line-height:1.05;margin-bottom:16px">
+            Welcome to<br>
+            <span style="color:#C4694C">Windsurf2API</span>
+          </h1>
+          <p style="font-size:0.9375rem;color:#6B6B6B;line-height:1.7;max-width:420px;margin-bottom:28px">
+            Your workspace is ready. Manage content streams, system configurations, and user accounts from this kinetic gallery interface.
+          </p>
+          <div style="display:flex;gap:12px">
+            <button class="btn btn-primary" style="padding:12px 24px;font-size:14px;border-radius:10px">
+              Launch Project
+            </button>
+            <button class="btn" style="padding:12px 24px;font-size:14px;border-radius:10px;background:transparent">
+              View Documentation
+            </button>
+          </div>
+        </div>
+        <div style="position:relative;width:320px;flex-shrink:0">
+          <div style="width:100%;height:240px;background:linear-gradient(135deg,#E8E4E0,#F5F2EE);border-radius:16px;overflow:hidden;position:relative">
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+              <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#C4694C" stroke-width="1" opacity="0.3">
+                <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <path d="M21 15l-5-5L5 21"></path>
+              </svg>
+            </div>
+          </div>
+          <div style="position:absolute;bottom:-16px;left:-16px;background:#FFFFFF;border:1px solid #E8E4E0;border-radius:12px;padding:16px 20px;box-shadow:0 8px 30px rgba(0,0,0,0.08)">
+            <div style="font-size:1.5rem;font-weight:700;color:#C4694C;font-family:'Cormorant Garamond',Georgia,serif">94.2%</div>
+            <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#9B9B9B">System Efficiency</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Analytics + Health Row -->
+      <div style="display:flex;gap:20px;margin-bottom:20px">
+        <!-- Real-time Analytics -->
+        <div class="card" style="flex:1">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <div style="width:36px;height:36px;border-radius:10px;background:#F5F2EE;display:flex;align-items:center;justify-content:center">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C4694C" stroke-width="2">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+                </svg>
+              </div>
+              <div>
+                <div style="font-size:15px;font-weight:600;color:#1C1C1C;margin-bottom:4px">Real-time Analytics</div>
+                <div style="font-size:12px;color:#9B9B9B;line-height:1.5;max-width:280px">Monitor editorial engagement across all platforms with our new kinetic data visualization engine.</div>
+              </div>
+            </div>
+            <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#C4694C;background:rgba(196,105,76,0.08);padding:4px 10px;border-radius:6px">Live Updates</span>
+          </div>
+          <!-- Bar Chart Mockup -->
+          <div style="display:flex;align-items:flex-end;gap:10px;height:100px;padding-top:20px">
+            <div style="flex:1;height:40%;background:#F5F2EE;border-radius:6px 6px 0 0"></div>
+            <div style="flex:1;height:55%;background:#F5F2EE;border-radius:6px 6px 0 0"></div>
+            <div style="flex:1;height:70%;background:#F5F2EE;border-radius:6px 6px 0 0"></div>
+            <div style="flex:1;height:100%;background:#C4694C;border-radius:6px 6px 0 0"></div>
+            <div style="flex:1;height:80%;background:#F5F2EE;border-radius:6px 6px 0 0"></div>
+            <div style="flex:1;height:60%;background:#F5F2EE;border-radius:6px 6px 0 0"></div>
+            <div style="flex:1;height:45%;background:#F5F2EE;border-radius:6px 6px 0 0"></div>
+          </div>
+        </div>
+
+        <!-- System Health -->
+        <div class="card" style="width:280px;flex-shrink:0">
+          <div style="font-size:15px;font-weight:600;color:#1C1C1C;margin-bottom:20px">System Health</div>
+          <div style="margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#9B9B9B">Core Load</span>
+              <span style="font-size:12px;font-weight:600;color:#1C1C1C">24%</span>
+            </div>
+            <div style="width:100%;height:6px;background:#F5F2EE;border-radius:3px;overflow:hidden">
+              <div style="width:24%;height:100%;background:#C4694C;border-radius:3px"></div>
+            </div>
+          </div>
+          <div style="margin-bottom:20px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#9B9B9B">Memory Usage</span>
+              <span style="font-size:12px;font-weight:600;color:#1C1C1C">81%</span>
+            </div>
+            <div style="width:100%;height:6px;background:#F5F2EE;border-radius:3px;overflow:hidden">
+              <div style="width:81%;height:100%;background:#C4694C;border-radius:3px"></div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:10px;background:#FAFAF8;border-radius:8px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <span style="font-size:12px;font-weight:500;color:#1C1C1C">All systems nominal</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Stats Row -->
+      <div style="display:flex;gap:20px">
+        <div class="card" style="flex:1;display:flex;align-items:center;gap:16px">
+          <div style="width:40px;height:40px;border-radius:10px;background:#F5F2EE;display:flex;align-items:center;justify-content:center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B6B6B" stroke-width="2">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+          </div>
+          <div>
+            <div style="font-size:12px;color:#9B9B9B;margin-bottom:2px">Drafts</div>
+            <div style="font-size:1.5rem;font-weight:700;color:#1C1C1C;font-family:'Cormorant Garamond',Georgia,serif">12</div>
+          </div>
+        </div>
+        <div class="card" style="flex:1;display:flex;align-items:center;gap:16px">
+          <div style="width:40px;height:40px;border-radius:10px;background:#F5F2EE;display:flex;align-items:center;justify-content:center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B6B6B" stroke-width="2">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+          </div>
+          <div>
+            <div style="font-size:12px;color:#9B9B9B;margin-bottom:2px">Recent Logs</div>
+            <div style="font-size:1.5rem;font-weight:700;color:#1C1C1C;font-family:'Cormorant Garamond',Georgia,serif">1.2k</div>
+          </div>
+        </div>
+        <div style="flex:1;background:#C4694C;border-radius:12px;padding:24px;color:#FFFFFF">
+          <div style="font-size:14px;font-weight:600;margin-bottom:8px">Console Action</div>
+          <div style="font-size:12px;opacity:0.8;margin-bottom:16px">Re-sync all connected nodes</div>
+          <button style="background:rgba(255,255,255,0.2);border:none;border-radius:8px;padding:8px 16px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">
+            Re-sync Nodes
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 12h14M12 5l7 7-7 7"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Configuration Panel -->
+    <div class="panel" id="panel-channels">
+      <div class="section-title">
+        <span>Configuration</span>
+        <button class="btn btn-primary" onclick="App.showAddChannel()">+ New Connection</button>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table id="channels-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Email / Name</th>
+                <th>Status</th>
+                <th>Tier</th>
+                <th>RPM</th>
+                <th>Errors</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="empty-state hidden" id="channels-empty">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#D5CFC9" stroke-width="1.5" style="margin-bottom:12px">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"></path>
+          </svg>
+          <p>No connections yet. Add one to get started.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Accounts Panel -->
+    <div class="panel" id="panel-tokens">
+      <div class="section-title">
+        <span>Accounts</span>
+        <button class="btn btn-primary" onclick="App.showAddToken()">+ New Account</button>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table id="tokens-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Key</th>
+                <th>Status</th>
+                <th>Usage / Quota</th>
+                <th>Requests</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="empty-state hidden" id="tokens-empty">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#D5CFC9" stroke-width="1.5" style="margin-bottom:12px">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          <p>No accounts yet. Create one to grant API access.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Models Panel -->
+    <div class="panel" id="panel-models">
+      <div class="section-title">Models</div>
+      <div id="models-grid" class="models-grid"></div>
+    </div>
+
+    <!-- Analytics Panel -->
+    <div class="panel" id="panel-stats">
+      <div class="section-title">Analytics</div>
+      <div class="stats-grid" id="stats-cards"></div>
+      <div class="card" style="margin-top:16px">
+        <div class="card-header"><span class="card-title">Daily Trends (Last 7 Days)</span></div>
+        <div id="stats-daily"></div>
+      </div>
+    </div>
+
+    <!-- Logs Panel -->
+    <div class="panel" id="panel-logs">
+      <div class="section-title">Logs</div>
+      <div class="log-container" id="log-container">
+        <div class="log-line" style="color:#9B9B9B">Logs will appear here...</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+const App = {
+  password: localStorage.getItem('adminPw') || '',
+  currentPanel: 'overview',
+  pollers: {},
+
+  // ─── Init ───
+  init() {
+    this.checkAuth();
+    this.nav('overview');
+    this.startPolling();
+  },
+
+  // ─── Auth ───
+  async checkAuth() {
+    try {
+      const r = await this.api('GET', '/overview');
+      if (r._status === 401 || r.error === 'Unauthorized') {
+        document.getElementById('login-overlay').classList.remove('hidden');
+      } else {
+        document.getElementById('login-overlay').classList.add('hidden');
+      }
+    } catch {
+      document.getElementById('login-overlay').classList.remove('hidden');
+    }
+  },
+
+  async doLogin() {
+    const pw = document.getElementById('login-pw').value;
+    this.password = pw;
+    localStorage.setItem('adminPw', pw);
+    const r = await this.api('GET', '/overview');
+    if (r._status === 401 || r.error === 'Unauthorized') {
+      this.toast('Invalid password', 'error');
+    } else {
+      document.getElementById('login-overlay').classList.add('hidden');
+      this.toast({ title: 'Welcome back', sub: 'Dashboard ready · Admin access granted' }, 'success');
+    }
+  },
+
+  logout() {
+    this.password = '';
+    localStorage.removeItem('adminPw');
+    document.getElementById('login-overlay').classList.remove('hidden');
+    document.getElementById('login-pw').value = '';
+    this.toast('Signed out', 'info');
+  },
+
+  // ─── API ───
+  async api(method, path, body) {
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    if (this.password) opts.headers['X-Admin-Password'] = this.password;
+    if (body) opts.body = JSON.stringify(body);
+    try {
+      const r = await fetch('/dashboard' + path, opts);
+      const data = await r.json();
+      if (r.status === 401) {
+        return { _status: 401, error: 'Unauthorized' };
+      }
+      return data;
+    } catch (e) {
+      return { error: e.message };
+    }
+  },
+
+  // ─── Navigation ───
+  nav(panel) {
+    this.currentPanel = panel;
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    document.querySelector(`.nav-item[data-panel="${panel}"]`)?.classList.add('active');
+    document.querySelectorAll('.panel').forEach(el => el.classList.remove('active'));
+    document.getElementById('panel-' + panel).classList.add('active');
+    document.getElementById('sidebar').classList.remove('open');
+
+    // Load panel data
+    if (panel === 'overview') this.loadOverview();
+    if (panel === 'channels') this.loadChannels();
+    if (panel === 'tokens') this.loadTokens();
+    if (panel === 'models') this.loadModels();
+    if (panel === 'stats') this.loadStats();
+  },
+
+  toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+  },
+
+  // ─── Overview ───
+  async loadOverview() {
+    const d = await this.api('GET', '/overview');
+    document.getElementById('stat-channels').textContent = d.channelCount ?? '-';
+    document.getElementById('stat-active-channels').textContent = d.activeChannelCount ?? '-';
+    document.getElementById('stat-tokens').textContent = d.tokenCount ?? '-';
+    document.getElementById('stat-today').textContent = d.todayRequests ?? '-';
+
+    const lsBadge = document.getElementById('ls-status-badge');
+    if (d.lsReady) {
+      lsBadge.textContent = 'LS Ready';
+      lsBadge.className = 'badge badge-success';
+      document.getElementById('stat-system').textContent = '正常';
+      document.getElementById('stat-system').style.color = 'var(--success)';
+    } else {
+      lsBadge.textContent = 'LS Offline';
+      lsBadge.className = 'badge badge-error';
+      document.getElementById('stat-system').textContent = '离线';
+      document.getElementById('stat-system').style.color = 'var(--error)';
+    }
+    document.getElementById('stat-system-sub').textContent = d.hasChannels ? '有可用渠道' : '无可用的渠道';
+  },
+
+  // ─── Channels ───
+  async loadChannels() {
+    const d = await this.api('GET', '/channels');
+    const tbody = document.querySelector('#channels-table tbody');
+    const empty = document.getElementById('channels-empty');
+    const table = document.getElementById('channels-table');
+
+    if (!d.channels || d.channels.length === 0) {
+      tbody.innerHTML = '';
+      empty.classList.remove('hidden');
+      table.classList.add('hidden');
+      return;
+    }
+
+    empty.classList.add('hidden');
+    table.classList.remove('hidden');
+
+    tbody.innerHTML = d.channels.map(c => {
+      const statusClass = c.status === 'active' ? 'badge-success' : c.status === 'error' ? 'badge-error' : 'badge-warn';
+      return `<tr>
+        <td><code style="font-size:11px">${c.id}</code></td>
+        <td>${this.escape(c.email)}</td>
+        <td><span class="badge ${statusClass}">${c.status}</span></td>
+        <td>${c.tier}</td>
+        <td>${c.rpm}/60</td>
+        <td>${c.errorCount}</td>
+        <td>
+          <div class="btn-group">
+            <button class="btn btn-sm" onclick="App.probeChannel('${c.id}')">Probe</button>
+            ${c.status === 'active'
+              ? `<button class="btn btn-sm btn-danger" onclick="App.toggleChannel('${c.id}','disabled')">Disable</button>`
+              : `<button class="btn btn-sm btn-primary" onclick="App.toggleChannel('${c.id}','active')">Enable</button>`}
+            <button class="btn btn-sm btn-danger" onclick="App.deleteChannel('${c.id}')">Delete</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  },
+
+  async probeChannel(id) {
+    const r = await this.api('POST', `/channels/${id}/probe`);
+    this.toast(r.success ? 'Connection healthy' : r.error || 'Probe failed', r.success ? 'success' : 'error');
+    this.loadChannels();
+  },
+
+  async toggleChannel(id, status) {
+    await this.api('PATCH', `/channels/${id}`, { status });
+    this.loadChannels();
+  },
+
+  async deleteChannel(id) {
+    if (!confirm('Delete this connection?')) return;
+    await this.api('DELETE', `/channels/${id}`);
+    this.toast('Connection deleted', 'success');
+    this.loadChannels();
+    this.loadOverview();
+  },
+
+  showAddChannel() {
+    const html = `
+      <div class="form-group"><label>Email</label><input id="ch-email" placeholder="windsurf@email.com"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="ch-password" placeholder="Password"></div>
+      <div style="text-align:center;color:#9B9B9B;font-size:12px;margin:12px 0">— or —</div>
+      <div class="form-group"><label>Token</label><input id="ch-token" placeholder="devin_session_token..."></div>
+    `;
+    this.modal('New Connection', html, async () => {
+      const email = document.getElementById('ch-email').value;
+      const password = document.getElementById('ch-password').value;
+      const token = document.getElementById('ch-token').value;
+      const body = token ? { apiKey: token, email } : { email, password };
+      const r = await this.api('POST', '/channels', body);
+      if (r.success) {
+        this.toast('Connection added', 'success');
+        this.loadChannels();
+        this.loadOverview();
+      } else {
+        this.toast(r.error || 'Failed to add', 'error');
+      }
+    });
+  },
+
+  // ─── Tokens ───
+  async loadTokens() {
+    const d = await this.api('GET', '/tokens');
+    const tbody = document.querySelector('#tokens-table tbody');
+    const empty = document.getElementById('tokens-empty');
+    const table = document.getElementById('tokens-table');
+
+    if (!d.tokens || d.tokens.length === 0) {
+      tbody.innerHTML = '';
+      empty.classList.remove('hidden');
+      table.classList.add('hidden');
+      return;
+    }
+
+    empty.classList.add('hidden');
+    table.classList.remove('hidden');
+
+    tbody.innerHTML = d.tokens.map(t => {
+      const statusClass = t.status === 'active' ? 'badge-success' : 'badge-warn';
+      const pct = t.totalQuota > 0 ? Math.min(100, (t.usedQuota / t.totalQuota) * 100) : 0;
+      const quotaText = t.totalQuota > 0 ? `${t.usedQuota.toLocaleString()} / ${t.totalQuota.toLocaleString()}` : `${t.usedQuota.toLocaleString()} / 无限制`;
+      return `<tr>
+        <td>${this.escape(t.name)}</td>
+        <td><span class="key-display">${t.key.slice(0, 16)}...</span></td>
+        <td><span class="badge ${statusClass}">${t.status}</span></td>
+        <td>
+          <div>${quotaText}</div>
+          ${t.totalQuota > 0 ? `<div class="quota-bar"><div class="quota-fill" style="width:${pct}%"></div></div>` : ''}
+        </td>
+        <td>${t.reqCount || 0}</td>
+        <td>
+          <div class="btn-group">
+            ${t.status === 'active'
+              ? `<button class="btn btn-sm btn-danger" onclick="App.toggleToken('${t.id}','disabled')">Disable</button>`
+              : `<button class="btn btn-sm btn-primary" onclick="App.toggleToken('${t.id}','active')">Enable</button>`}
+            <button class="btn btn-sm btn-danger" onclick="App.deleteToken('${t.id}')">Delete</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  },
+
+  async toggleToken(id, status) {
+    await this.api('PATCH', `/tokens/${id}`, { status });
+    this.loadTokens();
+  },
+
+  async deleteToken(id) {
+    if (!confirm('Delete this account?')) return;
+    await this.api('DELETE', `/tokens/${id}`);
+    this.toast('Account deleted', 'success');
+    this.loadTokens();
+    this.loadOverview();
+  },
+
+  showAddToken() {
+    const html = `
+      <div class="form-group"><label>Name</label><input id="tk-name" placeholder="e.g. Test User"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Quota (0 = unlimited)</label><input type="number" id="tk-quota" value="0" min="0"></div>
+      </div>
+    `;
+    this.modal('New Account', html, async () => {
+      const name = document.getElementById('tk-name').value;
+      const quota = parseInt(document.getElementById('tk-quota').value) || 0;
+      const r = await this.api('POST', '/tokens', { name, totalQuota: quota });
+      if (r.success) {
+        this.toast(`Account created: ${r.token.key}`, 'success');
+        this.loadTokens();
+        this.loadOverview();
+      } else {
+        this.toast(r.error || 'Failed to create', 'error');
+      }
+    });
+  },
+
+  // ─── Models ───
+  async loadModels() {
+    const d = await this.api('GET', '/models');
+    const grid = document.getElementById('models-grid');
+    if (!d.models) { grid.innerHTML = '<p style="color:var(--text-dim)">加载失败</p>'; return; }
+
+    grid.innerHTML = d.models.map(m => {
+      const providerColors = {
+        anthropic: '#d4a574', openai: '#10a37f', zhipu: '#1e64e5',
+        moonshot: '#000', google: '#4285f4'
+      };
+      const color = providerColors[m.provider] || 'var(--text-muted)';
+      return `<div class="model-card">
+        <div class="provider" style="color:${color}">${m.provider}</div>
+        <div class="name">${m.name}</div>
+        <div class="credit">Credit: ${m.credit}x</div>
+      </div>`;
+    }).join('');
+  },
+
+  // ─── Stats ───
+  async loadStats() {
+    const d = await this.api('GET', '/stats');
+    const cards = document.getElementById('stats-cards');
+    cards.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-label">总请求数</div>
+        <div class="stat-value">${(d.totalRequests || 0).toLocaleString()}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">总 Token 数</div>
+        <div class="stat-value">${(d.totalTokens || 0).toLocaleString()}</div>
+      </div>
+    `;
+
+    const daily = document.getElementById('stats-daily');
+    const days = (d.daily || []).slice(-7);
+    if (days.length === 0) {
+      daily.innerHTML = '<p style="color:#9B9B9B;padding:20px">No data yet</p>';
+      return;
+    }
+
+    const maxReq = Math.max(...days.map(x => x.requests), 1);
+    daily.innerHTML = `<div style="padding:12px">` +
+      days.map(day => {
+        const pct = (day.requests / maxReq) * 100;
+        return `<div style="display:flex;align-items:center;gap:12px;margin:8px 0">
+          <div style="width:80px;font-size:12px;color:var(--text-dim)">${day.date}</div>
+          <div style="flex:1;background:var(--bg);border-radius:4px;height:24px;overflow:hidden">
+            <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,var(--accent),#8b5cf6);border-radius:4px;transition:width 0.5s"></div>
+          </div>
+          <div style="width:60px;text-align:right;font-size:12px;font-weight:600">${day.requests}</div>
+        </div>`;
+      }).join('') +
+      `</div>`;
+  },
+
+  // ─── Logs ───
+  addLog(level, msg) {
+    const container = document.getElementById('log-container');
+    const time = new Date().toLocaleTimeString();
+    const line = document.createElement('div');
+    line.className = 'log-line';
+    line.innerHTML = `<span class="log-time">${time}</span><span class="log-${level}">[${level.toUpperCase()}]</span> ${this.escape(String(msg))}`;
+    container.appendChild(line);
+    container.scrollTop = container.scrollHeight;
+    // Keep max 200 lines
+    while (container.children.length > 200) container.removeChild(container.firstChild);
+  },
+
+  // ─── Polling ───
+  startPolling() {
+    this.poll('overview', () => { if (this.currentPanel === 'overview') this.loadOverview(); }, 5000);
+    this.poll('channels', () => { if (this.currentPanel === 'channels') this.loadChannels(); }, 5000);
+    this.poll('tokens', () => { if (this.currentPanel === 'tokens') this.loadTokens(); }, 5000);
+    this.poll('stats', () => { if (this.currentPanel === 'stats') this.loadStats(); }, 10000);
+  },
+
+  poll(key, fn, interval) {
+    if (this.pollers[key]) clearInterval(this.pollers[key]);
+    this.pollers[key] = setInterval(() => { if (!document.hidden) fn(); }, interval);
+  },
+
+  // ─── Modal ───
+  modal(title, html, onOk) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal">
+        <div class="modal-header">${title}</div>
+        <div class="modal-body">${html}</div>
+        <div class="modal-footer">
+          <button class="btn" onclick="this.closest('.modal-overlay').remove()">取消</button>
+          <button class="btn btn-primary" id="modal-ok">确定</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    document.getElementById('modal-ok').onclick = () => { onOk(); overlay.remove(); };
+  },
+
+  // ─── Toast ───
+  toast(msg, type = 'info') {
+    const wrap = document.getElementById('toast-wrap');
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+
+    const iconSVG = {
+      success: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>',
+      error:   '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+      info:    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C4694C" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+    };
+
+    if (typeof msg === 'object' && msg.title) {
+      el.innerHTML = `
+        <div class="toast-rich">
+          <div class="toast-icon ${type}">${iconSVG[type] || iconSVG.info}</div>
+          <div class="toast-body">
+            <div class="toast-title">${this.escape(msg.title)}</div>
+            ${msg.sub ? `<div class="toast-sub">${this.escape(msg.sub)}</div>` : ''}
+          </div>
+        </div>`;
+    } else {
+      el.textContent = msg;
+    }
+
+    wrap.appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+  },
+
+  // ─── Utils ───
+  escape(s) {
+    const div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+  }
+};
+
+// Start
+App.init();
+</script>
+</body>
+</html>

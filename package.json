@@ -1,0 +1,28 @@
+{
+  "name": "windsurf2api",
+  "version": "0.1.0",
+  "description": "Turn your Windsurf subscription into an OpenAI / Anthropic-compatible API server",
+  "type": "module",
+  "license": "GPL-3.0",
+  "keywords": [
+    "windsurf",
+    "openai",
+    "anthropic",
+    "api-proxy",
+    "claude",
+    "gpt",
+    "llm"
+  ],
+  "scripts": {
+    "build": "tsc && cp -r src/dashboard dist/",
+    "dev": "tsc --watch &",
+    "start": "node dist/index.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

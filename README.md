@@ -83,6 +83,28 @@ docker run -d \
 
 See [`.env.example`](.env.example) for a template.
 
+### Anthropic Bridge Mode
+
+Anthropic `/v1/messages` now supports two service-level tool strategies controlled by [`config/bridge-mode.json`](config/bridge-mode.json):
+
+- `native_bridge`: current Claude Code compatible native Bash bridge
+- `prompt_emulation`: research mode that injects tools into the prompt and parses `<tool_call>` tags back out
+
+Hot reload applies to new requests only. You can flip modes without restarting the service:
+
+```bash
+node scripts/switch-bridge-mode.mjs native_bridge
+node scripts/switch-bridge-mode.mjs prompt_emulation
+```
+
+To validate a live deployment that shares the same config file:
+
+```bash
+export W2A_BASE_URL=http://127.0.0.1:3003
+export W2A_API_KEY=sk-your-token
+node scripts/e2e/verify-configurable-bridge-modes.mjs
+```
+
 ## API Endpoints
 
 | Method | Path | Auth | Description |

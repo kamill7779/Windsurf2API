@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Windsurf2Api Bridge Mode Config",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["anthropicToolMode"],
+  "properties": {
+    "anthropicToolMode": {
+      "type": "string",
+      "enum": ["native_bridge", "prompt_emulation"]
+    },
+    "hotReload": {
+      "type": "boolean",
+      "default": true
+    },
+    "logModeSwitch": {
+      "type": "boolean",
+      "default": true
+    }
+  }
+}

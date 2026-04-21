@@ -13,13 +13,13 @@ import { validateToken, isModelAllowedForToken, consumeQuota } from './token.js'
 import { recordRequest } from './stats.js';
 import { WindsurfClient, ChatChunk } from '../core/client.js';
 import { getLsPort, getCsrfToken } from '../core/langserver.js';
-import { PlannerMode } from '../core/windsurf.js';
+import { CascadeConfigOptions, PlannerMode } from '../core/windsurf.js';
 import {
   buildOpenAIToolUnsupportedError,
   hasOpenAIToolInput,
   hasResponsesToolInput,
-} from './tool-support.js';
-import { createToolBridgeSession } from './tool-bridge.js';
+} from './modes/native-bridge/tool-support.js';
+import { createToolBridgeSession } from './modes/native-bridge/tool-bridge.js';
 
 // ─── Shared core: auth → pick channel → stream → collect ───
 
@@ -107,7 +107,10 @@ function mapWindsurfToolCall(rawName: string, rawArgumentsJson: string): ToolMoc
 }
 
 export async function runChatCore(
-  messages: any[], modelKey: string, authKey: string
+  messages: any[],
+  modelKey: string,
+  authKey: string,
+  cascadeOptions: CascadeConfigOptions = {},
 ): Promise<ChatResult> {
   const tokenCheck = validateToken(authKey);
   if (!tokenCheck.valid) {
@@ -129,7 +132,7 @@ export async function runChatCore(
   }
 
   const client = new WindsurfClient(ch.apiKey, getLsPort(), getCsrfToken());
-  const gen = client.streamChat(messages, modelInfo.enumValue, modelInfo.modelUid!);
+  const gen = client.streamChat(messages, modelInfo.enumValue, modelInfo.modelUid!, cascadeOptions);
 
   let fullText = '';
   let fullThinking = '';

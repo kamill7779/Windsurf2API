@@ -1,0 +1,5 @@
+{
+  "anthropicToolMode": "native_bridge",
+  "hotReload": true,
+  "logModeSwitch": true
+}

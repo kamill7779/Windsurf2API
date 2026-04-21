@@ -1,3 +1,5 @@
+import { resolve } from 'path';
+
 /**
  * Global config and logger.
  */
@@ -8,6 +10,7 @@ export const config = {
   lsPort: parseInt(process.env.LS_PORT || '42100', 10),
   apiServerUrl: process.env.API_SERVER_URL || 'https://server.self-serve.windsurf.com',
   adminPassword: process.env.ADMIN_PASSWORD || '',
+  bridgeModeConfigPath: process.env.BRIDGE_MODE_CONFIG_PATH || resolve(process.cwd(), 'config', 'bridge-mode.json'),
 };
 
 export const log = {

@@ -90,6 +90,52 @@ test('prompt emulation builds a cascade transcript with prior turns and latest u
   assert.match(transcript, /\[Current user message\]\n<tool_result tool_call_id="toolu_123">done<\/tool_result>/);
 });
 
+test('prompt emulation collapses tool history into one upstream Cascade user transcript', async () => {
+  const mod = await compileAndImportTsModule('src/services/modes/prompt-emulation/tool-emulation.ts');
+
+  const cascadeMessages = mod.buildPromptEmulationCascadeMessages(
+    [
+      {
+        role: 'user',
+        content: [{ type: 'text', text: '当前 pwd 是什么？' }],
+      },
+      {
+        role: 'assistant',
+        content: [
+          { type: 'tool_use', id: 'toolu_pwd', name: 'Bash', input: { command: 'pwd' } },
+        ],
+      },
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: 'toolu_pwd',
+            content: [{ type: 'text', text: '/c/Users/23999' }],
+          },
+        ],
+      },
+      {
+        role: 'user',
+        content: [{ type: 'text', text: '不是中文目录吧？' }],
+      },
+    ],
+    'You are a coding assistant.',
+  );
+
+  assert.deepEqual(cascadeMessages, [
+    {
+      role: 'user',
+      content:
+        'You are a coding assistant.\n\n[Conversation so far]\n' +
+        'User: 当前 pwd 是什么？\n\n' +
+        'Assistant: <tool_call>{"name":"Bash","arguments":{"command":"pwd"}}</tool_call>\n\n' +
+        'User: <tool_result tool_call_id="toolu_pwd">\n/c/Users/23999\n</tool_result>\n\n' +
+        '[Current user message]\n不是中文目录吧？',
+    },
+  ]);
+});
+
 test('prompt emulation parses tool call tags and strips them from assistant text', async () => {
   const mod = await compileAndImportTsModule('src/services/modes/prompt-emulation/tool-emulation.ts');
 

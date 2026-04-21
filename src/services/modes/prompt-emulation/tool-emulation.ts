@@ -211,6 +211,17 @@ export function buildCascadeTranscriptFromMessages(
   return text;
 }
 
+export function buildPromptEmulationCascadeMessages(
+  messages: any[] = [],
+  systemPrompt?: string,
+): Array<{ role: 'user'; content: string }> {
+  const normalizedMessages = normalizeAnthropicMessagesForToolEmulation(messages, systemPrompt);
+  const transcript = buildCascadeTranscriptFromMessages(normalizedMessages);
+  return transcript
+    ? [{ role: 'user', content: transcript }]
+    : [];
+}
+
 export function parseToolCallsFromText(
   text: string,
   inputSchemas: Map<string, any> = new Map(),

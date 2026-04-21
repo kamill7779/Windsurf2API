@@ -6,9 +6,9 @@ import { PlannerMode } from '../../../core/windsurf.js';
 import { runChatCore } from '../../chat.js';
 import {
   AnthropicToolDefinition,
+  buildPromptEmulationCascadeMessages,
   buildToolPreambleForAnthropicTools,
   extractAnthropicToolDefinitions,
-  normalizeAnthropicMessagesForToolEmulation,
   parseToolCallsFromText,
 } from './tool-emulation.js';
 import { hasAnthropicToolMessages, PROMPT_EMULATION_MODE_ID } from './tool-support.js';
@@ -327,7 +327,7 @@ export async function handleAnthropicPromptMessage(
     return writeAnthropicTextResponse(res, body, result);
   }
 
-  const emulatedMessages = normalizeAnthropicMessagesForToolEmulation(body.messages || [], body.system);
+  const cascadeMessages = buildPromptEmulationCascadeMessages(body.messages || [], body.system);
   const toolPreamble = buildToolPreambleForAnthropicTools(
     anthropicTools.map(tool => ({
       name: tool.name,
@@ -337,7 +337,7 @@ export async function handleAnthropicPromptMessage(
     body.tool_choice,
   );
   const result = await runChatCore(
-    emulatedMessages,
+    cascadeMessages,
     modelKey,
     authKey,
     {

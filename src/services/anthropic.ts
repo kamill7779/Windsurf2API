@@ -7,8 +7,9 @@ import http from 'http';
 import { randomUUID } from 'crypto';
 import { log } from '../config.js';
 import { getCsrfToken, getLsPort } from '../core/langserver.js';
+import { PlannerMode } from '../core/windsurf.js';
 import { resolveModel, getModelInfo } from '../models.js';
-import { runChatCore, runToolMockCore, ChatError, ToolMockResult } from './chat.js';
+import { runChatCore, ChatError, ToolMockResult } from './chat.js';
 import {
   findToolBridgeSessionByToolCallId,
   getToolBridgeSession,
@@ -16,12 +17,17 @@ import {
 } from './tool-bridge.js';
 import {
   buildAnthropicToolUnsupportedError,
-  extractSupportedAnthropicMockTools,
   filterAnthropicToolInput,
   hasAnthropicToolMessages,
-  hasAnthropicToolInput,
   SupportedAnthropicMockTool,
 } from './tool-support.js';
+import {
+  AnthropicToolDefinition,
+  buildToolPreambleForAnthropicTools,
+  extractAnthropicToolDefinitions,
+  normalizeAnthropicMessagesForToolEmulation,
+  parseToolCallsFromText,
+} from './tool-emulation.js';
 
 function json(res: http.ServerResponse, status: number, body: object) {
   res.writeHead(status, {
@@ -243,6 +249,171 @@ function writeAnthropicTextResponse(
   });
 }
 
+interface AnthropicEmulatedToolCall {
+  id: string;
+  name: string;
+  input: Record<string, any>;
+}
+
+function generateToolUseId(): string {
+  return 'toolu_' + randomUUID().replace(/-/g, '').slice(0, 24);
+}
+
+function materializeAnthropicEmulatedToolCalls(
+  text: string,
+  tools: AnthropicToolDefinition[],
+): { text: string; toolCalls: AnthropicEmulatedToolCall[] } {
+  const schemaMap = new Map<string, any>();
+  for (const tool of tools) {
+    schemaMap.set(tool.name, tool.inputSchema);
+  }
+
+  const parsed = parseToolCallsFromText(text, schemaMap);
+  return {
+    text: parsed.text,
+    toolCalls: parsed.toolCalls.map(toolCall => ({
+      id: generateToolUseId(),
+      name: toolCall.name,
+      input: toolCall.input,
+    })),
+  };
+}
+
+function writeAnthropicPromptToolResponse(
+  res: http.ServerResponse,
+  body: any,
+  result: { text: string; modelInfo: { name: string }; promptTokens: number; completionTokens: number },
+  tools: AnthropicToolDefinition[],
+) {
+  const parsed = materializeAnthropicEmulatedToolCalls(result.text, tools);
+  if (parsed.toolCalls.length > 0) {
+    log.info('[Anthropic] parsed prompt-level tool calls', {
+      count: parsed.toolCalls.length,
+      names: parsed.toolCalls.map(toolCall => toolCall.name),
+      stream: !!body.stream,
+    });
+  } else if (result.text.includes('<tool_call>')) {
+    log.warn('[Anthropic] tool call tags were emitted but no valid tool calls were parsed', {
+      stream: !!body.stream,
+      textLength: result.text.length,
+    });
+  }
+
+  if (parsed.toolCalls.length === 0) {
+    return writeAnthropicTextResponse(res, body, {
+      ...result,
+      text: parsed.text,
+    });
+  }
+
+  const stream = !!body.stream;
+  if (stream) {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+    });
+
+    const msgId = 'msg_' + randomUUID().replace(/-/g, '');
+    anthropicEvent(res, 'message_start', {
+      type: 'message_start',
+      message: {
+        id: msgId,
+        type: 'message',
+        role: 'assistant',
+        model: body.model || result.modelInfo.name,
+        content: [],
+        stop_reason: null,
+        stop_sequence: null,
+        usage: { input_tokens: result.promptTokens, output_tokens: 0 },
+      },
+    });
+
+    let index = 0;
+    if (parsed.text) {
+      anthropicEvent(res, 'content_block_start', {
+        type: 'content_block_start',
+        index,
+        content_block: { type: 'text', text: '' },
+      });
+      anthropicEvent(res, 'content_block_delta', {
+        type: 'content_block_delta',
+        index,
+        delta: { type: 'text_delta', text: parsed.text },
+      });
+      anthropicEvent(res, 'content_block_stop', {
+        type: 'content_block_stop',
+        index,
+      });
+      index++;
+    }
+
+    for (const toolCall of parsed.toolCalls) {
+      anthropicEvent(res, 'content_block_start', {
+        type: 'content_block_start',
+        index,
+        content_block: {
+          type: 'tool_use',
+          id: toolCall.id,
+          name: toolCall.name,
+          input: {},
+        },
+      });
+      anthropicEvent(res, 'content_block_delta', {
+        type: 'content_block_delta',
+        index,
+        delta: {
+          type: 'input_json_delta',
+          partial_json: JSON.stringify(toolCall.input),
+        },
+      });
+      anthropicEvent(res, 'content_block_stop', {
+        type: 'content_block_stop',
+        index,
+      });
+      index++;
+    }
+
+    anthropicEvent(res, 'message_delta', {
+      type: 'message_delta',
+      delta: { stop_reason: 'tool_use', stop_sequence: null },
+      usage: { output_tokens: result.completionTokens },
+    });
+    anthropicEvent(res, 'message_stop', { type: 'message_stop' });
+    res.end();
+    return;
+  }
+
+  const msgId = 'msg_' + randomUUID().replace(/-/g, '');
+  const content = [];
+  if (parsed.text) {
+    content.push({ type: 'text', text: parsed.text });
+  }
+  for (const toolCall of parsed.toolCalls) {
+    content.push({
+      type: 'tool_use',
+      id: toolCall.id,
+      name: toolCall.name,
+      input: toolCall.input,
+    });
+  }
+
+  json(res, 200, {
+    id: msgId,
+    type: 'message',
+    role: 'assistant',
+    model: body.model || result.modelInfo.name,
+    content,
+    stop_reason: 'tool_use',
+    stop_sequence: null,
+    usage: {
+      input_tokens: result.promptTokens,
+      output_tokens: result.completionTokens,
+    },
+  });
+}
+
 function writeAnthropicToolMockResponse(
   res: http.ServerResponse,
   body: any,
@@ -365,6 +536,45 @@ export async function handleAnthropicMessage(
       });
     }
 
+    const anthropicTools = extractAnthropicToolDefinitions(body);
+    const shouldUsePromptToolEmulation =
+      anthropicTools.length > 0 || hasAnthropicToolMessages(body);
+
+    if (shouldUsePromptToolEmulation) {
+      log.info('[Anthropic] using prompt-level tool emulation', {
+        model: body.model,
+        toolCount: anthropicTools.length,
+        stream: !!body.stream,
+        toolChoice: typeof body.tool_choice === 'string' ? body.tool_choice : body.tool_choice?.type || 'auto',
+        hasToolMessages: hasAnthropicToolMessages(body),
+      });
+      const emulatedMessages = normalizeAnthropicMessagesForToolEmulation(body.messages || [], body.system);
+      const toolPreamble = buildToolPreambleForAnthropicTools(
+        anthropicTools.map(tool => ({
+          name: tool.name,
+          description: tool.description,
+          input_schema: tool.inputSchema,
+        })),
+        body.tool_choice,
+      );
+      const result = await runChatCore(
+        emulatedMessages,
+        modelKey,
+        authKey,
+        {
+          plannerMode: PlannerMode.NO_TOOL,
+          toolPreamble,
+        },
+      );
+      log.info('[Anthropic] prompt-level tool emulation completed', {
+        model: body.model,
+        textLength: result.text.length,
+        promptTokens: result.promptTokens,
+        completionTokens: result.completionTokens,
+      });
+      return writeAnthropicPromptToolResponse(res, body, result, anthropicTools);
+    }
+
     const toolResult = extractLatestAnthropicToolResult(body);
     if (toolResult) {
       const explicitBridgeId = typeof body?.w2a?.bridge_id === 'string' ? body.w2a.bridge_id : '';
@@ -428,25 +638,6 @@ export async function handleAnthropicMessage(
     }
 
     const messages = convertMessages(body.messages || [], body.system);
-    const supportedTools = extractSupportedAnthropicMockTools(body);
-
-    if (hasAnthropicToolMessages(body)) {
-      return json(res, 501, buildAnthropicToolUnsupportedError());
-    }
-
-    if (Array.isArray(body?.tools) && body.tools.length > 0) {
-      if (supportedTools.length === 0 || !hasAnthropicToolInput(body)) {
-        return json(res, 501, buildAnthropicToolUnsupportedError());
-      }
-
-      const result = await runToolMockCore(
-        messages,
-        modelKey,
-        authKey,
-        new Set(supportedTools.map(tool => tool.name)),
-      );
-      return writeAnthropicToolMockResponse(res, body, result, supportedTools);
-    }
 
     const result = await runChatCore(messages, modelKey, authKey);
     return writeAnthropicTextResponse(res, body, result);

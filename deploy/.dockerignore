@@ -1,13 +1,3 @@
 node_modules
 .git
-.tmp
-tmp
-data
-docs
-scripts
 *.md
-*.mjs
-*.tar.gz
-*.py
-.env*
-!.env.example

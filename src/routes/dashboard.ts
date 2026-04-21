@@ -25,6 +25,11 @@ function json(res: http.ServerResponse, status: number, body: object) {
 }
 
 async function readBody(req: http.IncomingMessage): Promise<any> {
+  const parsed = (req as any).parsedBody;
+  if (parsed !== undefined) {
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  }
+
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     req.on('data', c => chunks.push(c));

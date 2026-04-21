@@ -1,20 +1,10 @@
 {
   "name": "windsurf2api",
-  "version": "0.1.0",
-  "description": "Turn your Windsurf subscription into an OpenAI / Anthropic-compatible API server",
+  "version": "2.0.0",
+  "description": "Windsurf-to-OpenAI API proxy with Dashboard + Multi-Channel + API Keys",
   "type": "module",
-  "license": "GPL-3.0",
-  "keywords": [
-    "windsurf",
-    "openai",
-    "anthropic",
-    "api-proxy",
-    "claude",
-    "gpt",
-    "llm"
-  ],
   "scripts": {
-    "build": "tsc && cp -r src/dashboard dist/",
+    "build": "tsc && node scripts/copy-dashboard.mjs",
     "dev": "tsc --watch &",
     "start": "node dist/index.js"
   },

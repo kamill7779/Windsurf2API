@@ -25,6 +25,7 @@ import {
   parseTrajectorySteps,
 } from './windsurf.js';
 import { log } from '../config.js';
+import { buildCascadeTranscriptFromMessages } from '../services/tool-emulation.js';
 
 const LS_SERVICE = '/exa.language_server_pb.LanguageServerService';
 
@@ -273,8 +274,15 @@ export class WindsurfClient {
     await this.warmup();
     const cascadeId = await this.startCascade();
 
-    const userMsg = messages.filter((m: any) => m.role === 'user').pop();
-    const text = userMsg ? String(userMsg.content) : '';
+    const normalizedMessages = Array.isArray(messages)
+      ? messages.map((message: any) => ({
+          role: String(message?.role || 'user'),
+          content: typeof message?.content === 'string'
+            ? message.content
+            : JSON.stringify(message?.content ?? ''),
+        }))
+      : [];
+    const text = buildCascadeTranscriptFromMessages(normalizedMessages);
 
     await this.sendMessage(cascadeId, text, modelEnum, modelUid, options);
     yield* this.streamCascade(cascadeId, 0);

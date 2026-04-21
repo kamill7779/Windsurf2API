@@ -1,5 +1,5 @@
 /**
- * Windsurf2API — Windsurf-to-OpenAI API proxy with Dashboard
+ * Windsurf2Api — Windsurf-to-OpenAI API proxy with Dashboard
  */
 
 import { config, log } from './config.js';
@@ -17,7 +17,7 @@ async function main() {
     \  V /  __/ | | | |\ V / /___/ ___ \|  __/| |
      \_/ \___|_| |_|_| \_/|_____/_/   \_\_|  |___|
 
-  Windsurf2API — Windsurf-to-OpenAI/Anthropic API Proxy
+  Windsurf2Api v2.0 — Dashboard + Multi-Channel + API Keys
 `);
 
   // Load persisted data

@@ -1,13 +1,13 @@
 /**
- * Native tool bridge status helpers.
+ * Tool support status helpers.
  *
- * Windsurf2Api no longer simulates tool calling via prompt injection.
- * Until a real client-executed native bridge exists, tool requests must be
- * rejected explicitly instead of being silently rewritten.
+ * Anthropic /v1/messages may emulate tool use via prompt injection on the
+ * Claude Code path, but OpenAI-style tool input remains unsupported on the
+ * generic OpenAI/Responses endpoints unless a dedicated bridge is implemented.
  */
 
 export const NATIVE_TOOL_BRIDGE_MESSAGE =
-  'Only the minimal Anthropic Bash native tool bridge is implemented in Windsurf2Api. Other tool paths remain unsupported.';
+  'OpenAI-style native tool input remains unsupported on this Windsurf2Api endpoint.';
 
 export interface SupportedAnthropicMockTool {
   name: 'Bash' | 'Write';

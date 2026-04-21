@@ -2,6 +2,12 @@
 
 Turn your [Windsurf](https://windsurf.com) subscription into a fully OpenAI / Anthropic-compatible API server — with a dashboard, multi-channel rotation, and API-key management.
 
+> **⚠️ Project Status: Early Development**
+>
+> This project is in its early stages — many features listed below are planned but not yet fully implemented. The core proxy (chat completions + streaming) works, but areas like tool bridging, full Anthropic compatibility, and the admin dashboard are still under active development.
+>
+> **Interested in contributing or collaborating?** Feel free to reach out! See [Contact](#contact) below.
+
 ```
 ┌────────────┐       ┌───────────────┐       ┌─────────────────────┐
 │  Any Client │──────▶│  Windsurf2API │──────▶│  Windsurf Language  │
@@ -105,7 +111,7 @@ curl http://localhost:3003/v1/chat/completions \
 
 ### Claude Code
 
-Point Claude Code at your Windsurf2Api instance:
+Point Claude Code at your Windsurf2API instance:
 
 ```bash
 export ANTHROPIC_BASE_URL=http://your-server:3003
@@ -171,6 +177,16 @@ src/
 └── dashboard/
     └── index.html    # Admin UI (SPA)
 ```
+
+## Contact
+
+This is a solo side-project and I'd love to have people join in.
+If you're interested in contributing, have ideas, or just want to chat:
+
+- **Telegram**: [@kamill7779](https://t.me/kamill7779)
+- **Email**: kamill7779@outlook.com
+
+Feel free to open an Issue or send a message directly.
 
 ## License
 
